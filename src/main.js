@@ -7,6 +7,8 @@ import 'element-plus/dist/index.css'
 import router from '@/router'
 //importamos el componente principal
 import App from './App.vue'
+//importar firebase
+import FirebaseApp from '@/firebase'
 
 //importamos iconos del elemento plus
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'

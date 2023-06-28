@@ -1,7 +1,11 @@
 <script setup>
 import { reactive, ref } from 'vue';
+import {auth, db} from '@/firebase'
+import {doc, setDoc } from 'firebase/firestore';
+import {createUserWithEmailAndPassword} from 'firebase/auth'
 
 const labelPosition = 'top';
+const mostrarContrasena = ref(false)
 
 const formRegistro = reactive({
     nombres: '',
@@ -13,48 +17,69 @@ const formRegistro = reactive({
 
 const reglasFormulario = ref(null)
 
-const reglaRegistro = reactive(
+const reglasRegistro = reactive(
     {
-        nombre: [
-            {required: true, message: 'Por favor ingrese sus nombre', trigger: 'blur'}
+        nombres: [
+            { required: true, message: 'Por favor ingrese su nombre', trigger: 'blur'}
         ],
         apellidos: [
-            {required: true, message: 'Por favor ingrese sus apellio', trigger: 'blur'}
+            { required: true, message: 'Por favor ingrese sus apellidos', trigger: 'blur'}
         ],
         correo: [
-            {required: true, message: 'Por favor ingrese su correo electrónico', trigger: 'blur'},
-            {min:8, message:'La contraseñadebe tener al menos 8 caracteres', trigger:'blur'}
+            { required: true, message: 'Por favor ingrese su correo electrónico', trigger: 'blur'},
+            { type: 'email', message: 'Por favor ingrese un correo electrónico válido', trigger: 'blur'}
+        ],
+        contrasena: [
+            { required: true, message: 'Por favor ingrese su contraseña', trigger: 'blur'},
+            { min: 8, message: 'La contraseña debe tener al menos 8 caracteres', trigger: 'blur'}
         ],
         confirmarContrasena: [
-            {required: true, message: 'Por favor confirme su contraseña', trigger: 'blur'},
-            {min:8, message:'La contraseñadebe tener al menos 8 caracteres', trigger:'blur'},
+            { required: true, message: 'Por favor confirme su contraseña', trigger: 'blur'},
+            { min: 8, message: 'La contraseña debe tener al menos 8 caracteres', trigger: 'blur'},
             {
-                validator:(rule, value) => {
-                    if (value ==""){
+                validator: (rule, value) => {
+                    if (value === ""){
                         return new Error('Por favor confirme su contraseña')
                     } else if (value !== formRegistro.contrasena){
                         return new Error('Las contraseñas no coinciden')
                     } else {
                         return true
                     }
-                }, trigger:'blur'
+                }, trigger: 'blur'
             }
         ]
+
     }
 )
 
-const enviarFormulario =async() => {
+const enviarFormulario = async () => {
     const formulario = reglasFormulario.value
     if(!formulario) return
     await formulario.validate(async(valid) => {
         if (valid) {
-            console.log('submit!');
+            try {
+                const usuario = await createUserWithEmailAndPassword(auth, formRegistro.correo, formRegistro.contrasena)
+
+                const docRef = doc(db, 'usuarios', usuario.user.uid)
+
+                await setDoc(docRef, {
+                    uid: usuario.user.uid,
+                    nombres: formRegistro.nombres,
+                    apellidos: formRegistro.apellidos,
+                    correo: formRegistro.correo,
+                })
+
+                console.log('Usuario registrado')
+            } catch (error) {
+                console.log(error)
+            }
         } else {
             console.log('error submit!!');
             return false;
         }
     })
 }
+
 
 </script>
 <template>
@@ -68,11 +93,11 @@ const enviarFormulario =async() => {
                 :label-position="labelPosition"
                 :rules="reglasRegistro"
                 ref="reglasFormulario"
-                class="space-y-2"
+                class="space-y-6"
                 >
                     <el-row :gutter="10">
                         <el-col :span="12">
-                            <el-form-item label="Nombres" prop="nombre">
+                            <el-form-item label="Nombres" prop="nombres">
                                 <el-input v-model="formRegistro.nombres" placeholder="Nombres" required clearable></el-input>
                             </el-form-item>
                         </el-col>
@@ -83,27 +108,30 @@ const enviarFormulario =async() => {
                         </el-col>
                     </el-row>
 
-                    <el-form-item label="correo electronico" prop="correo electronico">
+                    <el-form-item label="Correo electrónico" prop="correo">
                         <el-input v-model="formRegistro.correo" type="email" required clearable placeholder="Correo electrónico"></el-input>
                     </el-form-item>
 
                     <el-row :gutter="10">
                         <el-col :span="12">
-                            <el-form-item label="contraseña" prop="contraseña">
-                                <el-input v-model="formRegistro.contrasena" type="password" placeholder="Contraseña" required></el-input>
+                            <el-form-item label="Contraseña" prop="contrasena">
+                                <el-input v-model="formRegistro.contrasena" :type="mostrarContrasena ? 'text' : 'password'" placeholder="Contraseña" required clearable></el-input>
                             </el-form-item>
                         </el-col>
                         <el-col :span="12">
-                            <el-form-item label="Confirmar Contraseña" prop="confirmar contraseña">
-                                <el-input v-model="formRegistro.confirmarContrasena.contrasena" placeholder="Confirmar contraseña" show-password></el-input>
+                            <el-form-item label="Confirmar contraseña" prop="confirmarContrasena">
+                                <el-input v-model="formRegistro.confirmarContrasena" :type="mostrarContrasena ? 'text' : 'password'" placeholder="Confirmar contraseña" required clearable></el-input>
                             </el-form-item>
                         </el-col>
                     </el-row>
 
-                    <el-button @click="enviarFormulario" type="primary" class="w-full">
+                    <el-form-item>
+                        <el-checkbox v-model="mostrarContrasena">Mostrar contraseña</el-checkbox>
+                    </el-form-item>
+
+                    <el-button @click="enviarFormulario"  type="primary" class="w-full">
                         Registrar
                     </el-button>
-
                 </el-form>
             </div>
         </div>
