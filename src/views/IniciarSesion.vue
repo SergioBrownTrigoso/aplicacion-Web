@@ -1,15 +1,20 @@
 <script setup>
 
 import { reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { auth } from '@/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { ElLoading, ElMessage } from 'element-plus';
 
 const labelPosition = 'top';
+const rutas = useRouter()
 
 const formIniciarSesion = reactive({
     correo: '',
     contrasena: '',
 })
 
-const reglasFormulario = ref(null)
+const reglasFormRef = ref(null)
 const reglasIniciarSesion = reactive({
     correo: [
         {required: true, message: 'Por favor ingresa tu correo electrónico', trigger: 'blur'},
@@ -20,6 +25,30 @@ const reglasIniciarSesion = reactive({
         {min: 8, message: 'La contraseña debe tener al menos 8 caracteres', trigger: 'blur'}
     ]
 })
+
+const iniciarSesion = async () => {
+    const formEL = reglasFormRef.value
+    if(!formEL) return
+    await formEL.validate(async(valid,fields) => {
+        if (valid) {
+            const loading = ElLoading.service({fullscreen: true})
+            signInWithEmailAndPassword(auth, formIniciarSesion.correo, formIniciarSesion.contrasena)
+            .then((userCredential) => { 
+            loading.close()
+            const user = userCredential.user
+            rutas.push('/dashboard')
+            })
+            .catch((error) => {
+                loading.close()
+                const errorCode = error.code
+                const errorMessage = error.message
+                ElMessage.error('error: ' + errorMessage)
+            })
+        } else {
+            return false
+        }
+    })
+}
 
 </script>
 <template>
@@ -32,7 +61,7 @@ const reglasIniciarSesion = reactive({
                 :model="formIniciarSesion"
                 :label-position="labelPosition"
                 :rules="reglasIniciarSesion"
-                ref="reglasFormulario"
+                ref="reglasFormRef"
                 hide-required-asterisk
                 class="space-y-6"
                 >
@@ -41,10 +70,10 @@ const reglasIniciarSesion = reactive({
                     </el-form-item>
 
                     <el-form-item label="Contraseña" prop="contrasena" required>
-                        <el-input type="password" v-model="formIniciarSesion.contrasena"></el-input>
+                        <el-input type="password" v-model="formIniciarSesion.contrasena" show-password></el-input>
                     </el-form-item>
                     
-                    <el-button type="primary" class="w-full">Iniciar Sesión</el-button>
+                    <el-button type="primary" class="w-full" @click="iniciarSesion">Iniciar Sesión</el-button>
                 </el-form>
             </div>
         </div>
